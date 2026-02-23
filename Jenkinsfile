@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'local-agent' }
+    agent any
 
     environment {
         FRONTEND_DIR = "frontend"
