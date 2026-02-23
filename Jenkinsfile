@@ -52,7 +52,7 @@ pipeline {
             steps {
                 sh """
                     echo "Deploying Backend..."
-                    sudo mkdir ${DEPLOY_PATH}/backend
+                    sudo mkdir ${DEPLOY_PATH}/backend || true
 
                     sudo rm -rf ${DEPLOY_PATH}/backend/*
                     sudo cp -r ${BACKEND_DIR} ${DEPLOY_PATH}/backend
