@@ -50,43 +50,60 @@ pipeline {
 
         stage('Deploy Backend') {
             steps {
-                sh """
-                    echo "Deploying Backend..."
+                sh '''
+                    echo "===== Deploying Backend ====="
 
-                    sudo rm -rf ${DEPLOY_PATH}/backend
-                    sudo mkdir -p ${DEPLOY_PATH}/backend
-                    sudo cp -r ${BACKEND_DIR}/* ${DEPLOY_PATH}/backend
+                    # Remove old backend completely (file or folder)
+                    sudo rm -rf /home/ec2-user/backend
 
-                    cd ${DEPLOY_PATH}/backend
-                    sudo npm install --production
+                    # Create fresh directory
+                    sudo mkdir -p /home/ec2-user/backend
 
-                    sudo systemctl restart ${SERVICE_NAME}
-                """
+                    # Copy backend contents safely
+                    sudo cp -r backend/. /home/ec2-user/backend/
+
+                    # Fix ownership
+                    sudo chown -R ec2-user:ec2-user /home/ec2-user/backend
+
+                    # Install production dependencies
+                    cd /home/ec2-user/backend
+                    sudo -u ec2-user npm install --production
+
+                    # Restart systemd service
+                    sudo systemctl restart backend
+                '''
             }
         }
 
         stage('Deploy Frontend') {
             steps {
-                sh """
-                    echo "Deploying Frontend..."
+                sh '''
+                    echo "===== Deploying Frontend ====="
 
-                    sudo rm -rf ${NGINX_PATH}/*
-                    sudo cp -r ${FRONTEND_DIR}/build/* ${NGINX_PATH}/
+                    # Clear nginx html folder
+                    sudo rm -rf /usr/share/nginx/html/*
 
+                    # Copy build files safely
+                    sudo cp -r frontend/build/. /usr/share/nginx/html/
+
+                    # Fix ownership for nginx
+                    sudo chown -R nginx:nginx /usr/share/nginx/html
+
+                    # Restart nginx
                     sudo systemctl restart nginx
-                """
+                '''
             }
         }
 
         stage('Verify Services') {
             steps {
-                sh """
-                    echo "Checking backend service..."
-                    sudo systemctl status ${SERVICE_NAME} --no-pager
+                sh '''
+                    echo "===== Checking Backend ====="
+                    sudo systemctl status backend --no-pager
 
-                    echo "Checking nginx..."
+                    echo "===== Checking Nginx ====="
                     sudo systemctl status nginx --no-pager
-                """
+                '''
             }
         }
     }
