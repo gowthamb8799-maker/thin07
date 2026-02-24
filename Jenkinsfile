@@ -53,23 +53,25 @@ pipeline {
                 sh '''
                     echo "===== Deploying Backend ====="
 
-                    # Remove old backend completely (file or folder)
+                    # Ensure backend folder exists in workspace
+                    if [ ! -d "backend" ]; then
+                        echo "Backend folder missing in workspace!"
+                        exit 1
+                    fi
+
+                    # Remove old backend (file or directory)
                     sudo rm -rf /home/ec2-user/backend
 
-                    # Create fresh directory
-                    sudo mkdir -p /home/ec2-user/backend
-
-                    # Copy backend contents safely
-                    sudo cp -r backend/. /home/ec2-user/backend/
+                    # Copy full backend folder
+                    sudo cp -r backend /home/ec2-user/
 
                     # Fix ownership
                     sudo chown -R ec2-user:ec2-user /home/ec2-user/backend
 
-                    # Install production dependencies
-                    cd /home/ec2-user/backend
-                    sudo -u ec2-user npm install --production
+                    # Install production dependencies as ec2-user
+                    sudo -u ec2-user bash -c "cd /home/ec2-user/backend && npm install --production"
 
-                    # Restart systemd service
+                    # Restart backend service
                     sudo systemctl restart backend
                 '''
             }
@@ -80,13 +82,19 @@ pipeline {
                 sh '''
                     echo "===== Deploying Frontend ====="
 
-                    # Clear nginx html folder
+                    # Ensure build exists
+                    if [ ! -d "frontend/build" ]; then
+                        echo "Frontend build folder missing!"
+                        exit 1
+                    fi
+
+                    # Clear nginx directory
                     sudo rm -rf /usr/share/nginx/html/*
 
-                    # Copy build files safely
-                    sudo cp -r frontend/build/. /usr/share/nginx/html/
+                    # Copy build output
+                    sudo cp -r frontend/build/* /usr/share/nginx/html/
 
-                    # Fix ownership for nginx
+                    # Set proper ownership
                     sudo chown -R nginx:nginx /usr/share/nginx/html
 
                     # Restart nginx
@@ -98,11 +106,11 @@ pipeline {
         stage('Verify Services') {
             steps {
                 sh '''
-                    echo "===== Checking Backend ====="
-                    sudo systemctl status backend --no-pager
+                    echo "===== Backend Status ====="
+                    sudo systemctl is-active backend
 
-                    echo "===== Checking Nginx ====="
-                    sudo systemctl status nginx --no-pager
+                    echo "===== Nginx Status ====="
+                    sudo systemctl is-active nginx
                 '''
             }
         }
