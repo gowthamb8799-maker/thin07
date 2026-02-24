@@ -82,24 +82,33 @@ pipeline {
                 sh '''
                     echo "===== Deploying Frontend ====="
 
-                    # Ensure build exists
-                    if [ ! -d "frontend/build" ]; then
-                        echo "Frontend build folder missing!"
-                        exit 1
+                    echo "Checking frontend folder contents:"
+                    ls -la frontend
+
+                    # Determine output directory
+                    if [ -d "frontend/build" ]; then
+                        OUTPUT_DIR="frontend/build"
+                    elif [ -d "frontend/dist" ]; then
+                          OUTPUT_DIR="frontend/dist"
+                    else
+                    echo "No build or dist folder found!"
+                    exit 1
                     fi
 
-                    # Clear nginx directory
+                    echo "Using output directory: $OUTPUT_DIR"
+
+            	    # Clear nginx html
                     sudo rm -rf /usr/share/nginx/html/*
 
-                    # Copy build output
-                    sudo cp -r frontend/build/* /usr/share/nginx/html/
+                    # Copy frontend files
+                    sudo cp -r $OUTPUT_DIR/* /usr/share/nginx/html/
 
-                    # Set proper ownership
+                    # Fix permissions
                     sudo chown -R nginx:nginx /usr/share/nginx/html
 
                     # Restart nginx
                     sudo systemctl restart nginx
-                '''
+               '''
             }
         }
 
